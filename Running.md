@@ -19,7 +19,7 @@ npm.cmd --prefix frontend run dev
 - API: http://127.0.0.1:3000/
 - Salud del proceso: http://127.0.0.1:3000/health
 
-Para un clon nuevo, seguir la instalación con Docker Compose del README. El contenedor existente y Compose usan volúmenes distintos y el mismo puerto 5434: ejecutar solo uno.
+Para un clon nuevo, seguir la instalación con Docker Compose del README. El contenedor existente y Compose usan volúmenes distintos y el mismo puerto 5432: ejecutar solo uno.
 
 Para revisar la entrega después de preparar la base:
 

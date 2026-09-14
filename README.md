@@ -6,29 +6,29 @@ Prueba técnica con PostgreSQL 15+, Express, express-validator, React 19 y TypeS
 
 Requisitos: Node **24.15+ de la rama 24**, npm y Docker Desktop. Colocar en `data/`: `customers.csv`, `products.csv`, `orders.csv` y `order_items.csv`.
 
-Si el sistema ya está instalado, usar `docker start ecofor-postgres` y pasar al arranque de backend/frontend. La base de ese contenedor ya contiene la carga; no hace falta repetir la instalación ni la ingesta.
+**PostgreSQL corre en Docker**, accesible en `127.0.0.1:5434`. Para volver a iniciar el sistema, ejecutar `docker compose up -d --wait` y arrancar backend/frontend; los datos se conservan.
 
 Para una **base nueva**, desde la raíz en PowerShell. Antes de ejecutar `npm ci` o `npm run setup`, detener los servidores con Ctrl+C para liberar los archivos de `node_modules` en Windows:
 
 ```powershell
 Copy-Item backend/.env.example backend/.env
 docker compose up -d --wait
-npm.cmd ci
-npm.cmd run setup
-npm.cmd --prefix backend run migrate
-npm.cmd --prefix backend run ingest:orders
+npm ci
+npm run setup
+npm --prefix backend run migrate
+npm --prefix backend run ingest:orders
 ```
 
-Compose y el contenedor existente `ecofor-postgres` usan el puerto 5434: iniciar solo uno. Conservar `backend/.env` si la base ya estaba configurada.
+Conservar `backend/.env` si la base ya estaba configurada; debe usar `DB_PORT=5434` y las credenciales del contenedor.
 
 Iniciar el backend y el frontend en **terminales separadas**:
 
 ```powershell
-npm.cmd --prefix backend run dev
+npm --prefix backend run dev
 ```
 
 ```powershell
-npm.cmd --prefix frontend run dev
+npm --prefix frontend run dev
 ```
 
 - Cliente: http://127.0.0.1:5173
@@ -37,7 +37,7 @@ npm.cmd --prefix frontend run dev
 
 En el menú, **Top clientes** permite consultar el ranking por fecha de corte. Desde el detalle de un pedido, **Simular descuentos** permite comparar cupones de porcentaje, monto fijo y N por M; muestra el ahorro por ítem sin modificar el pedido.
 
-El inventario anterior se carga opcionalmente con `npm.cmd --prefix backend run ingest`, usando `data/ecofor_simulacion_inventario.csv`. En macOS/Linux, reemplazar `npm.cmd` por `npm` y `Copy-Item` por `cp`.
+El inventario anterior se carga opcionalmente con `npm --prefix backend run ingest`, usando `data/ecofor_simulacion_inventario.csv`. En macOS/Linux, reemplazar `Copy-Item` por `cp`.
 
 ## Decisiones
 
@@ -61,7 +61,7 @@ El procedimiento, las consultas de cada endpoint y el DDL de índices están en 
 Con PostgreSQL preparado:
 
 ```powershell
-npm.cmd run check
+npm run check
 ```
 
 Ejecuta formato, TypeScript, pruebas de API e ingesta, descuentos, React, lint y build. Las pruebas de integración crean y eliminan bases temporales; requieren permiso CREATEDB.
