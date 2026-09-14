@@ -2,6 +2,26 @@
 
 Prueba técnica con PostgreSQL 15+, Express, express-validator, React 19 y TypeScript. El cliente usa estado local, fetch nativo y CSS. Incluye listado, creación y detalle de pedidos, top clientes y simulación de descuentos.
 
+## Capturas de la aplicación
+
+### Gestión de pedidos
+
+Listado de pedidos con filtros por cliente, estado y fechas, y acceso al detalle.
+
+![Interfaz principal de ECOFOR con listado y filtros de pedidos](images/interfaz_principal.png)
+
+### Inventario
+
+Catálogo de ventas cargado desde `products.csv`, con búsqueda por nombre o SKU, paginación y edición de stock.
+
+![Inventario ECOFOR con productos, precios, existencias y edición de stock](images/inventario.png)
+
+### Top clientes
+
+Ranking de los 10 clientes con mayor monto en los 30 días anteriores a la fecha de corte, excluyendo pedidos cancelados.
+
+![Reporte de top clientes con monto total, pedidos y ticket promedio](images/top_clientes.png)
+
 ## Ejecutar
 
 Requisitos: Node **24.15+ de la rama 24**, npm y Docker Desktop. Colocar en `data/`: `customers.csv`, `products.csv`, `orders.csv` y `order_items.csv`.
@@ -16,6 +36,9 @@ docker compose up -d --wait
 npm ci
 npm run setup
 npm --prefix backend run migrate
+
+# Crear la carpeta data en la raíz y adjuntar los CSVs
+
 npm --prefix backend run ingest:orders
 ```
 

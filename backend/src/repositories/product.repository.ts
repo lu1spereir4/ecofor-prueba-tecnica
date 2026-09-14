@@ -1,5 +1,14 @@
 import { pool } from '../db';
 
+export async function updateCatalogStock(id: number, stock: number) {
+  const result = await pool.query(
+    `UPDATE sales.products SET stock = $1 WHERE id = $2
+     RETURNING id, sku, name, round(price, 2)::text AS price, stock`,
+    [stock, id],
+  );
+  return result.rows[0] ?? null;
+}
+
 interface ProductFilters {
   search?: string;
   category?: string;

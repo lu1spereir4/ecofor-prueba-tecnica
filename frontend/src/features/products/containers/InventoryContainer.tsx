@@ -6,7 +6,7 @@ export function InventoryContainer({ enabled }: { enabled: boolean }) {
     <Inventory
       rows={state.rows}
       search={state.draft.search}
-      category={state.draft.category}
+      pagination={state.pagination}
       loading={state.loading}
       error={state.error}
       notice={state.notice}

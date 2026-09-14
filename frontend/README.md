@@ -14,7 +14,7 @@ Se usa estado local porque filtros, selección y formularios pertenecen a cada v
 
 ## Vistas y ejecución
 
-`#/orders` muestra el listado; `#/orders/new` crea pedidos; `#/orders/:id` abre el detalle y el simulador de descuentos; `#/reports/top-customers` muestra el ranking con fecha de corte; `#/inventory` conserva el inventario anterior. La navegación por hash permite recargar un detalle sin configurar reescrituras del servidor.
+`#/orders` muestra el listado; `#/orders/new` crea pedidos; `#/orders/:id` abre el detalle y el simulador de descuentos; `#/reports/top-customers` muestra el ranking con fecha de corte; `#/inventory` muestra los productos de ventas cargados desde `products.csv`, con búsqueda por nombre/SKU, paginación y edición de stock sobre `sales.products`. La navegación por hash permite recargar un detalle sin configurar reescrituras del servidor.
 
 `reports/` consulta los 10 clientes con mayor monto. `discounts/` valida hasta 30 cupones, envía sus condiciones a la API y presenta la combinación elegida y el desglose por ítem. El cálculo pertenece al backend y no modifica el pedido; editar un cupón cancela la consulta anterior y descarta su resultado.
 

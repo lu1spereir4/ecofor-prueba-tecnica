@@ -379,32 +379,50 @@ describe('Detalle e inventario', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('conserva la edición de stock del inventario anterior con fetch y estado local', async () => {
-    const product = {
-      id: 'old-1',
-      codigo: 'INV01',
-      nombre: 'Madera',
-      categoria: 'Forestal',
-      precio: 1000,
-      stock: 5,
-      proveedor: 'ECOFOR',
-      fecha_actualizacion: '2026-09-14',
-    };
+  it('muestra el catálogo de ventas y edita su stock', async () => {
+    const product = { id: 7, sku: 'INV01', name: 'Madera', price: '1000.25', stock: 5 };
     respond = async (_url, init) =>
       init.method === 'PATCH'
         ? json({ data: { ...product, stock: 9 } })
-        : json({ data: [product], count: 1 });
+        : json({ data: [product], nextCursor: null });
     mount('#/inventory');
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Editar stock' }));
+    expect(requests('GET', '/api/catalog/products').length).toBeGreaterThan(0);
+    expect(requests('GET', '/api/products')).toHaveLength(0);
+    expect(screen.getByRole('cell', { name: '1.000,25' })).toBeInTheDocument();
     const stock = screen.getByLabelText('Nuevo stock de INV01');
     await user.clear(stock);
     await user.type(stock, '9');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
     await screen.findByText('Stock actualizado correctamente.');
     expect(screen.getByRole('cell', { name: '9' })).toBeInTheDocument();
-    expect(JSON.parse(String(requests('PATCH', '/api/products/old-1/stock')[0][1]?.body))).toEqual({
+    expect(
+      JSON.parse(String(requests('PATCH', '/api/catalog/products/7/stock')[0][1]?.body)),
+    ).toEqual({
       stock: 9,
     });
+  });
+  it('pagina el inventario y reinicia el cursor al buscar', async () => {
+    respond = async (url) => {
+      if (url.pathname !== '/api/catalog/products') return json({ data: [] });
+      return json({
+        data: url.searchParams.has('after') ? [products[1]] : [products[0]],
+        nextCursor: url.searchParams.has('after') ? null : 'ABC',
+      });
+    };
+    mount('#/inventory');
+    const user = userEvent.setup();
+    await screen.findByRole('cell', { name: 'Producto ABC' });
+    await user.click(screen.getByRole('button', { name: 'Siguiente' }));
+    await screen.findByRole('cell', { name: 'Producto XYZ' });
+    expect(latestUrl('/api/catalog/products').searchParams.get('after')).toBe('ABC');
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
+    await user.type(screen.getByLabelText('Nombre o código'), 'ABC');
+    await user.click(screen.getByRole('button', { name: 'Buscar productos' }));
+    await screen.findByRole('cell', { name: 'Producto ABC' });
+    expect(latestUrl('/api/catalog/products').searchParams.get('search')).toBe('ABC');
+    expect(latestUrl('/api/catalog/products').searchParams.has('after')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
   });
 });

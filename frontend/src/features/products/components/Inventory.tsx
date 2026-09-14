@@ -1,28 +1,28 @@
 import type { ErrorNotice } from '../../../shared/api/http';
 import { RequestError } from '../../../shared/components/RequestError';
+import { Pagination, type PaginationProps } from '../../../shared/components/Pagination';
 interface Props {
   rows: {
-    id: string;
+    id: number;
     code: string;
     name: string;
-    category: string;
     priceLabel: string;
     stock: number;
   }[];
   search: string;
-  category: string;
+  pagination: PaginationProps;
   loading: boolean;
   error: ErrorNotice | null;
   notice: string;
-  editingId: string | null;
+  editingId: number | null;
   stockValue: string;
   stockError: string;
   saving: boolean;
-  onFieldChange: (field: 'search' | 'category', value: string) => void;
+  onFieldChange: (field: 'search', value: string) => void;
   onSearch: () => void;
   onClear: () => void;
   onRetry: () => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: number) => void;
   onStockChange: (value: string) => void;
   onCancel: () => void;
   onSave: () => void;
@@ -32,7 +32,7 @@ export function Inventory(props: Props) {
     <section aria-labelledby="inventory-title">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Inventario original</p>
+          <p className="eyebrow">Catálogo de ventas</p>
           <h1 id="inventory-title">Inventario ECOFOR</h1>
           <p>Consulta productos y actualiza sus existencias.</p>
         </div>
@@ -52,14 +52,6 @@ export function Inventory(props: Props) {
             onChange={(event) => props.onFieldChange('search', event.target.value)}
           />
         </label>
-        <label>
-          Categoría
-          <input
-            value={props.category}
-            disabled={props.saving}
-            onChange={(event) => props.onFieldChange('category', event.target.value)}
-          />
-        </label>
         <div className="actions">
           <button type="submit" disabled={props.saving} className="button-primary">
             Buscar productos
@@ -76,14 +68,14 @@ export function Inventory(props: Props) {
         </p>
       )}
       <p role="status">
-        {props.loading ? 'Cargando productos…' : `${props.rows.length} productos encontrados`}
+        {props.loading ? 'Cargando productos…' : `${props.rows.length} productos en esta página`}
       </p>
       <div className="table-scroll panel">
         <table aria-busy={props.loading}>
           <caption className="sr-only">Productos del inventario y edición de stock</caption>
           <thead>
             <tr>
-              {['Código', 'Producto', 'Categoría', 'Precio', 'Stock', 'Acción'].map((label) => (
+              {['Código', 'Producto', 'Precio', 'Stock', 'Acción'].map((label) => (
                 <th key={label} scope="col">
                   {label}
                 </th>
@@ -95,7 +87,6 @@ export function Inventory(props: Props) {
               <tr key={row.id}>
                 <td>{row.code}</td>
                 <td>{row.name}</td>
-                <td>{row.category}</td>
                 <td className="money">{row.priceLabel}</td>
                 <td>{row.stock}</td>
                 <td>
@@ -151,6 +142,7 @@ export function Inventory(props: Props) {
           <p className="empty-state">No se encontraron productos.</p>
         )}
       </div>
+      <Pagination {...props.pagination} />
     </section>
   );
 }

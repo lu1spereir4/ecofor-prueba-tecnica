@@ -2,11 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProducts, updateStock } from '../api';
 import { errorNotice } from '../../../shared/api/http';
 import { useReadRequest } from '../../../shared/hooks/useReadRequest';
-const currency = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
+import { formatAmount } from '../../../shared/format';
 export function useInventory(enabled: boolean) {
-  const [draft, setDraft] = useState({ search: '', category: '' });
-  const [query, setQuery] = useState({ search: '', category: '' });
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ search: '' });
+  const [query, setQuery] = useState({
+    search: '',
+    cursors: [undefined] as (string | undefined)[],
+  });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [stock, setStock] = useState('');
   const [stockError, setStockError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -19,9 +22,13 @@ export function useInventory(enabled: boolean) {
       mounted.current = false;
     };
   }, []);
-  const load = useCallback((signal: AbortSignal) => getProducts(query, signal), [query]);
+  const load = useCallback(
+    (signal: AbortSignal) =>
+      getProducts({ search: query.search, after: query.cursors.at(-1), limit: 20 }, signal),
+    [query],
+  );
   const { data, loading, error, updateData } = useReadRequest(load, enabled);
-  const items = data ?? [];
+  const items = data?.data ?? [];
   async function save() {
     if (!editingId || busy.current) return;
     if (!/^\d+$/.test(stock) || Number(stock) > 2147483647) {
@@ -36,7 +43,12 @@ export function useInventory(enabled: boolean) {
       const updated = await updateStock(editingId, Number(stock));
       if (mounted.current) {
         updateData((current) =>
-          (current ?? []).map((item) => (item.id === updated.id ? updated : item)),
+          current
+            ? {
+                ...current,
+                data: current.data.map((item) => (item.id === updated.id ? updated : item)),
+              }
+            : current,
         );
         setEditingId(null);
         setNotice('Stock actualizado correctamente.');
@@ -53,13 +65,29 @@ export function useInventory(enabled: boolean) {
       !loading && !error
         ? items.map((item) => ({
             id: item.id,
-            code: item.codigo,
-            name: item.nombre,
-            category: item.categoria,
-            priceLabel: currency.format(item.precio),
+            code: item.sku,
+            name: item.name,
+            priceLabel: formatAmount(item.price),
             stock: item.stock,
           }))
         : [],
+    pagination: {
+      label: `Página ${query.cursors.length} de inventario`,
+      previousDisabled: loading || saving || query.cursors.length === 1,
+      nextDisabled: loading || saving || !!error || !data?.nextCursor,
+      onPrevious: () => {
+        if (!loading && !saving && query.cursors.length > 1) {
+          setEditingId(null);
+          setQuery((current) => ({ ...current, cursors: current.cursors.slice(0, -1) }));
+        }
+      },
+      onNext: () => {
+        if (!loading && !saving && !error && data?.nextCursor) {
+          setEditingId(null);
+          setQuery((current) => ({ ...current, cursors: [...current.cursors, data.nextCursor!] }));
+        }
+      },
+    },
     draft,
     loading,
     error,
@@ -69,23 +97,23 @@ export function useInventory(enabled: boolean) {
     saving,
     notice,
     save,
-    setField: (field: 'search' | 'category', value: string) =>
+    setField: (field: 'search', value: string) =>
       setDraft((current) => ({ ...current, [field]: value })),
     search: () => {
       if (!saving) {
         setEditingId(null);
-        setQuery({ search: draft.search.trim(), category: draft.category.trim() });
+        setQuery({ search: draft.search.trim(), cursors: [undefined] });
       }
     },
     clear: () => {
       if (!saving) {
-        setDraft({ search: '', category: '' });
-        setQuery({ search: '', category: '' });
+        setDraft({ search: '' });
+        setQuery({ search: '', cursors: [undefined] });
         setEditingId(null);
       }
     },
     retry: () => setQuery((current) => ({ ...current })),
-    edit: (id: string) => {
+    edit: (id: number) => {
       if (!saving) {
         const item = items.find((row) => row.id === id);
         if (item) {

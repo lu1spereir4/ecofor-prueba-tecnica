@@ -1,6 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 
-import { findProducts, updateProductStock } from '../repositories/product.repository';
+import {
+  findProducts,
+  updateProductStock,
+  updateCatalogStock,
+} from '../repositories/product.repository';
+
+export async function patchCatalogStock(req: Request, res: Response, next: NextFunction) {
+  try {
+    const product = await updateCatalogStock(Number(req.params.id), Number(req.body.stock));
+    if (!product) {
+      res.status(404).json({ message: 'Producto no encontrado' });
+      return;
+    }
+    res.json({ data: product });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function getProducts(req: Request, res: Response, next: NextFunction) {
   try {

@@ -67,6 +67,26 @@ async function worker() {
         location: response.headers.get('location'),
       };
     };
+    const patchStock = (id: string | number, stock: unknown) =>
+      fetch(base + '/api/catalog/products/' + id + '/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock }),
+      });
+    const updatedStock = await patchStock(products.EMPTY!, 12);
+    assert.equal(updatedStock.status, 200);
+    assert.equal((await readJson<{ data: { stock: number } }>(updatedStock)).data.stock, 12);
+    assert.equal(
+      (await pool.query('SELECT stock FROM sales.products WHERE id=$1', [products.EMPTY])).rows[0]
+        .stock,
+      12,
+    );
+    for (const invalid of [-1, 1.5, '12', null, 2147483648])
+      assert.equal((await patchStock(products.EMPTY!, invalid)).status, 400);
+    assert.equal((await patchStock('invalid', 0)).status, 400);
+    assert.equal((await patchStock(2147483647, 0)).status, 404);
+    assert.equal((await patchStock(products.EMPTY!, 0)).status, 200);
+
     const index = await request<{ endpoints: { orders: string } }>('/');
     assert.equal(index.status, 200);
     assert.equal(index.data.endpoints.orders, '/orders');
