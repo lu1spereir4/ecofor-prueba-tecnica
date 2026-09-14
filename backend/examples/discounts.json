@@ -1,0 +1,7 @@
+{
+  "coupons": [
+    { "code": "PROMO10", "type": "percentage", "value": 10, "stackable": true },
+    { "code": "FIJO5", "type": "fixed_amount", "value": "5.00", "stackable": true, "min_amount": "10.00" },
+    { "code": "SOLO25", "type": "percentage", "value": 25, "stackable": false }
+  ]
+}

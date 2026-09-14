@@ -1,0 +1,307 @@
+{
+  "info": {
+    "name": "ECOFOR - Backend pedidos, reportes y descuentos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden. Las solicitudes POST /orders crean pedidos y descuentan stock. Los descuentos son una simulación sin cambios. Los primeros pasos seleccionan IDs reales del catálogo sales."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "customer_id",
+      "value": "1"
+    },
+    {
+      "key": "product_id",
+      "value": "1"
+    },
+    {
+      "key": "sku",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": "1"
+    },
+    {
+      "key": "cursor",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Obtener customer_id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/customers?limit=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const customer = pm.response.json().data[0];",
+              "pm.test(\"Hay clientes cargados\", () => pm.expect(customer).to.be.an(\"object\"));",
+              "if (customer) pm.collectionVariables.set(\"customer_id\", customer.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Obtener product_id con stock",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/catalog/products?limit=100"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const product = pm.response.json().data.find(row => row.stock >= 3);",
+              "pm.test(\"Hay un producto con al menos 3 unidades\", () => pm.expect(product).to.be.an(\"object\"));",
+              "if (product) { pm.collectionVariables.set(\"product_id\", product.id); pm.collectionVariables.set(\"sku\", product.sku); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Crear pedido (descuenta stock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/orders",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"items\": [{ \"product_id\": {{product_id}}, \"quantity\": 3 }]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "const order = pm.response.json().data;",
+              "pm.test(\"Pending y monto con dos decimales\", () => { pm.expect(order.status).to.eql(\"pending\"); pm.expect(order.total).to.match(/^\\d+\\.\\d{2}$/); });",
+              "pm.collectionVariables.set(\"order_id\", order.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Listar pedidos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/orders?limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const result = pm.response.json();",
+              "pm.collectionVariables.set(\"cursor\", result.nextCursor || \"\");",
+              "pm.test(\"Tamaño máximo 20\", () => pm.expect(result.data.length).to.be.at.most(20));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Detalle del pedido",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/orders/{{order_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Cliente e ítems\", () => { const o = pm.response.json().data; pm.expect(o.customer.id).to.eql(Number(pm.collectionVariables.get(\"customer_id\"))); pm.expect(o.items.length).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Comparar descuentos",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/orders/{{order_id}}/apply-discounts",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"coupons\": [\n    {\n      \"code\": \"PROMO10\",\n      \"type\": \"percentage\",\n      \"value\": 10,\n      \"stackable\": true\n    },\n    {\n      \"code\": \"3X2\",\n      \"type\": \"n_for_m\",\n      \"sku\": \"{{sku}}\",\n      \"n\": 3,\n      \"m\": 2,\n      \"stackable\": true\n    },\n    {\n      \"code\": \"SOLO25\",\n      \"type\": \"percentage\",\n      \"value\": 25,\n      \"stackable\": false\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const r = pm.response.json();",
+              "pm.test(\"Descuentos como decimales\", () => { pm.expect(r.total_discount).to.match(/^\\d+\\.\\d{2}$/); pm.expect(r.items.length).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Top 10 clientes últimos 30 días",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/reports/top-customers"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Máximo 10 clientes\", () => pm.expect(pm.response.json().data.length).to.be.at.most(10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Payload inválido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/orders",
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"customer_id\": {{customer_id}}, \"items\": [{ \"product_id\": {{product_id}}, \"quantity\": 0 }] }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Código de validación\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Más de 30 cupones (sin truncar)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/orders/{{order_id}}/apply-discounts",
+        "body": {
+          "mode": "raw",
+          "raw": "{{invalid_coupons}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set(\"invalid_coupons\", JSON.stringify({coupons: Array.from({length:31}, (_,i) => ({code:`C${i}`,type:\"percentage\",value:1,stackable:true}))}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Pedido inexistente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/orders/2147483647"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

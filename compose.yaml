@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecofor_db
+      POSTGRES_USER: ecofor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecofor123}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecofor -d ecofor_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  postgres-data:

@@ -1,0 +1,19 @@
+{
+  "name": "ecofor-simulacion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestión de pedidos con PostgreSQL, Express y React",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "setup": "npm --prefix backend ci && npm --prefix frontend ci",
+    "test": "npm --prefix backend run typecheck && npm --prefix backend test && npm --prefix backend run test:orders && npm --prefix backend run test:discounts && npm --prefix backend run test:backend && npm --prefix frontend test && npm --prefix frontend run lint && npm --prefix frontend run build",
+    "format": "prettier --write \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx,css}\" \"frontend/*config*.{ts,json}\" \"backend/tsconfig.json\"",
+    "format:check": "prettier --check \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx,css}\" \"frontend/*config*.{ts,json}\" \"backend/tsconfig.json\"",
+    "check": "npm run format:check && npm test"
+  },
+  "devDependencies": {
+    "prettier": "3.9.6"
+  }
+}

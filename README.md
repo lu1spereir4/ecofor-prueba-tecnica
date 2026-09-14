@@ -1,79 +1,71 @@
-# Inventario ECOFOR
+# ECOFOR — Gestión de pedidos
 
-Aplicación de práctica con PostgreSQL 15, Express, TypeScript, React 19, Redux Toolkit y Tailwind. Permite consultar productos, buscar por nombre o código, filtrar por categoría exacta y actualizar stock sin recargar la página.
+Prueba técnica con PostgreSQL 15+, Express, express-validator, React 19 y TypeScript. El cliente usa estado local, fetch nativo y CSS. Incluye listado, creación y detalle de pedidos, top clientes y simulación de descuentos.
 
-## Ejecutar en este equipo
+## Ejecutar
 
-Docker Desktop debe estar iniciado. Desde la raíz:
+Requisitos: Node **24.15+ de la rama 24**, npm y Docker Desktop. Colocar en `data/`: `customers.csv`, `products.csv`, `orders.csv` y `order_items.csv`.
 
-```powershell
-docker start ecofor-postgres
-cd backend
-npm.cmd install
-npm.cmd run test-db
-npm.cmd run dev
-```
+Si el sistema ya está instalado, usar `docker start ecofor-postgres` y pasar al arranque de backend/frontend. La base de ese contenedor ya contiene la carga; no hace falta repetir la instalación ni la ingesta.
 
-En otra terminal, desde la raíz:
+Para una **base nueva**, desde la raíz en PowerShell. Antes de ejecutar `npm ci` o `npm run setup`, detener los servidores con Ctrl+C para liberar los archivos de `node_modules` en Windows:
 
 ```powershell
-cd frontend
-npm.cmd install
-npm.cmd run dev
-```
-
-Abre http://127.0.0.1:5173. API: http://localhost:3000/health y http://localhost:3000/api/products.
-
-PostgreSQL de Docker está publicado en `127.0.0.1:5434`, para evitar el conflicto con PostgreSQL instalado en Windows. El backend usa `backend/.env`. Vite redirige `/api` al backend en el puerto 3000; para otro servidor se puede configurar `VITE_API_URL` usando `frontend/.env.example`. Si cambia un `.env`, reinicia su servidor.
-
-Usamos `npm.cmd` y `npx.cmd` porque PowerShell puede bloquear los archivos `.ps1`.
-
-## Preparar una base nueva (otro equipo)
-
-Solo si no existe el contenedor:
-
-```powershell
-docker run -d --name ecofor-postgres --restart unless-stopped -p 127.0.0.1:5434:5432 -e POSTGRES_USER=ecofor -e POSTGRES_PASSWORD=ecofor123 -e POSTGRES_DB=ecofor_db -v ecofor-data:/var/lib/postgresql/data postgres:15
 Copy-Item backend/.env.example backend/.env
+docker compose up -d --wait
+npm.cmd ci
+npm.cmd run setup
+npm.cmd --prefix backend run migrate
+npm.cmd --prefix backend run ingest:orders
 ```
 
-Espera a que PostgreSQL esté listo. Desde la raíz, crea la tabla y carga el CSV:
+Compose y el contenedor existente `ecofor-postgres` usan el puerto 5434: iniciar solo uno. Conservar `backend/.env` si la base ya estaba configurada.
+
+Iniciar el backend y el frontend en **terminales separadas**:
 
 ```powershell
-Get-Content backend/schema.sql -Raw | docker exec -i ecofor-postgres psql -v ON_ERROR_STOP=1 -U ecofor -d ecofor_db
-cd backend
-npm.cmd install
-npm.cmd run ingest
+npm.cmd --prefix backend run dev
 ```
-
-La ingesta valida las filas e informa los rechazos. Usa UPSERT por código: ejecutarla de nuevo actualiza los productos existentes, incluido su stock, con los valores del CSV. Las credenciales del ejemplo son para esta práctica local.
-
-## Verificación
 
 ```powershell
-npm.cmd --prefix backend run typecheck
-npm.cmd --prefix backend test
-npm.cmd --prefix frontend run build
-npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run dev
 ```
 
-La prueba de API requiere la base y tabla disponibles. Crea un producto temporal, comprueba filtros, actualización y validación, y lo elimina al terminar. No cambia los productos del CSV.
+- Cliente: http://127.0.0.1:5173
+- API: http://127.0.0.1:3000
+- Vite redirige `/api` al backend. Para otra dirección, usar `frontend/.env.example` y definir `VITE_API_URL`.
 
-En la interfaz: buscar `taladro`, limpiar, filtrar `Seguridad`, editar stock, guardar y recargar para comprobar persistencia. Los errores de consulta y guardado aparecen en pantalla. Un campo de stock vacío, negativo o decimal no es válido.
+En el menú, **Top clientes** permite consultar el ranking por fecha de corte. Desde el detalle de un pedido, **Simular descuentos** permite comparar cupones de porcentaje, monto fijo y N por M; muestra el ahorro por ítem sin modificar el pedido.
 
-## Organización y explicación del flujo
+El inventario anterior se carga opcionalmente con `npm.cmd --prefix backend run ingest`, usando `data/ecofor_simulacion_inventario.csv`. En macOS/Linux, reemplazar `npm.cmd` por `npm` y `Copy-Item` por `cp`.
 
-- `backend/src/ingest.ts`: CSV, validación y UPSERT en PostgreSQL.
-- `backend/src/routes`, `controllers`, `repositories`: validación HTTP, respuestas y consultas SQL parametrizadas.
-- `frontend/src/services/productsApi.ts`: solicitudes GET/PATCH y errores HTTP.
-- `frontend/src/features/products`: tipos, thunks y estado de productos, carga, errores y guardado.
-- `frontend/src/app`: store y hooks tipados; `main.tsx` conecta el Provider.
-- `frontend/src/pages/ProductsPage.tsx`: componentes funcionales, filtros y edición de stock.
+## Decisiones
 
-Al montar la pantalla, `useEffect` despacha `fetchProducts`. El thunk llama al cliente HTTP; Express consulta PostgreSQL y Redux guarda los productos. `useAppSelector` hace que React refleje el nuevo estado. Al guardar stock, el PATCH devuelve el producto actualizado y el slice lo reemplaza sin recargar la página.
+- **Modelo:** claves naturales para las referencias CSV e IDs numéricos para HTTP. Precios con NUMERIC y fechas con TIMESTAMPTZ; montos JSON con dos decimales.
+- **Ingesta:** COPY a tablas temporales y sincronización en una transacción. Repetir los mismos archivos conserva las mismas filas e IDs. Ante emails/SKU repetidos prevalece la última aparición; se conservan todas las filas fuente. Las referencias ausentes quedan pendientes, sin perder pedidos ni ítems.
+- **Stock:** creación transaccional y bloqueo de productos con FOR UPDATE en orden de ID. Un fallo revierte todo; las solicitudes concurrentes no venden más stock del disponible.
+- **Listado:** cursor por `created_at DESC, id DESC`, 20 filas por defecto y máximo 100. Se suman solo los ítems de la página; se evita OFFSET sobre millones de pedidos.
+- **Descuentos:** cálculo independiente sobre montos originales, en centavos con BigInt y tope por ítem. Se compara el conjunto acumulable con cada cupón exclusivo; no hace falta explorar todas las combinaciones.
+- **React:** estado local porque filtros y formularios pertenecen a cada vista. Cada feature separa `components/` presentacionales, `containers/` y `hooks/` con estado y HTTP. Se cancelan lecturas obsoletas y se bloquea el doble envío al crear.
 
-Los campos de búsqueda y edición son estado local con `useState`; los productos y sus solicitudes viven en Redux. `createSlice` usa Immer para producir actualizaciones inmutables a partir de la sintaxis de asignación. Las solicitudes antiguas no reemplazan los resultados de una búsqueda más reciente.
+**La ingesta reemplaza la instantánea de ventas:** restablece stock y estados del CSV, y elimina pedidos creados por API que no estén en los archivos. Ejecutarla durante la preparación de datos, no como sincronización de ventas activas.
 
-## Git
+## Migración de channel
 
-El repositorio ya está inicializado. `.gitignore` excluye dependencias, builds y `.env`. Para preparar tu entrega, revisa `git status` y los archivos nuevos en el editor; después puedes agregar los archivos y crear tu commit. No se ha publicado ni creado un commit automáticamente.
+La migración `003_orders_channel.sql` agrega `channel TEXT NOT NULL DEFAULT 'web'`. PostgreSQL guarda el default constante en metadatos, evitando actualizar o reescribir 50 millones de filas. Usa una transacción corta, NOWAIT y reintentos para no quedar encolada detrás de consultas largas. Requiere un bloqueo exclusivo breve; no implica cero bloqueo.
+
+El procedimiento, las consultas de cada endpoint y el DDL de índices están en [backend/README.md](backend/README.md), con sus justificaciones. Las migraciones completas están en [backend/migrations](backend/migrations).
+
+## Pruebas
+
+Con PostgreSQL preparado:
+
+```powershell
+npm.cmd run check
+```
+
+Ejecuta formato, TypeScript, pruebas de API e ingesta, descuentos, React, lint y build. Las pruebas de integración crean y eliminan bases temporales; requieren permiso CREATEDB.
+
+Verificado: pruebas React, 6 de cálculo de descuentos, idempotencia y 100 solicitudes concurrentes (37 ventas con stock 37). Con 30 cupones y 100 ítems, el máximo local fue 17,1 ms. La migración se probó con lectores/escritores y sin reescritura, pero no con 50 millones de filas reales.
+
+Para pruebas manuales: [colección Postman](backend/postman/ECOFOR.postman_collection.json).

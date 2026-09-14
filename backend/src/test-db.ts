@@ -2,9 +2,7 @@ import { pool } from './db';
 
 async function main() {
   try {
-    const result = await pool.query(
-      'SELECT current_database(), current_user, NOW()'
-    );
+    const result = await pool.query('SELECT current_database(), current_user, NOW()');
 
     console.log(result.rows[0]);
   } catch (error) {

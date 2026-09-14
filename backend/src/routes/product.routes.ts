@@ -1,14 +1,7 @@
 import { Router } from 'express';
-import {
-  body,
-  param,
-  query
-} from 'express-validator';
+import { body, param, query } from 'express-validator';
 
-import {
-  getProducts,
-  patchProductStock
-} from '../controllers/product.controller';
+import { getProducts, patchProductStock } from '../controllers/product.controller';
 
 import { validateRequest } from '../middleware/validate';
 
@@ -16,36 +9,26 @@ const router = Router();
 
 router.get(
   '/',
-  query('search')
-    .optional()
-    .isString()
-    .trim(),
+  query('search').optional().isString().trim(),
 
-  query('category')
-    .optional()
-    .isString()
-    .trim(),
+  query('category').optional().isString().trim(),
 
   validateRequest,
-  getProducts
+  getProducts,
 );
 
 router.patch(
   '/:id/stock',
 
-  param('id')
-    .isInt({ min: 1 })
-    .withMessage('id debe ser un entero positivo'),
+  param('id').isInt({ min: 1 }).withMessage('id debe ser un entero positivo'),
 
   body('stock')
-    .custom(value => typeof value === 'number' && Number.isInteger(value))
+    .custom((value) => typeof value === 'number' && Number.isInteger(value))
     .isInt({ min: 0, max: 2147483647 })
-    .withMessage(
-      'stock debe ser un entero mayor o igual a 0'
-    ),
+    .withMessage('stock debe ser un entero mayor o igual a 0'),
 
   validateRequest,
-  patchProductStock
+  patchProductStock,
 );
 
 export default router;

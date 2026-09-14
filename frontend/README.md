@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# Cliente ECOFOR
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19, TypeScript estricto, fetch nativo, estado local y CSS. La instalación completa está en el [README principal](../README.md).
 
-Currently, two official plugins are available:
+## Organización
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Cada feature separa tres capas:
 
-## React Compiler
+- `components/`: datos y callbacks por props; sin HTTP ni lógica de negocio.
+- `containers/`: conectan los componentes con los hooks.
+- `hooks/`: estado, validación y llamadas a `api.ts`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Se usa estado local porque filtros, selección y formularios pertenecen a cada vista. `shared/` contiene transporte HTTP, formato y lecturas cancelables; `models.ts` prepara los datos de presentación.
 
-## Expanding the Oxlint configuration
+## Vistas y ejecución
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+`#/orders` muestra el listado; `#/orders/new` crea pedidos; `#/orders/:id` abre el detalle y el simulador de descuentos; `#/reports/top-customers` muestra el ranking con fecha de corte; `#/inventory` conserva el inventario anterior. La navegación por hash permite recargar un detalle sin configurar reescrituras del servidor.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+`reports/` consulta los 10 clientes con mayor monto. `discounts/` valida hasta 30 cupones, envía sus condiciones a la API y presenta la combinación elegida y el desglose por ítem. El cálculo pertenece al backend y no modifica el pedido; editar un cupón cancela la consulta anterior y descarta su resultado.
+
+Con el backend activo en el puerto 3000, ejecutar desde la raíz:
+
+```powershell
+npm.cmd --prefix frontend run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Abrir http://127.0.0.1:5173. Vite redirige `/api` al backend. En producción, servir `dist/` y configurar ese proxy o definir `VITE_API_URL` al compilar.
+
+```powershell
+npm.cmd --prefix frontend test
+npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run build
+```

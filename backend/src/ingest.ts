@@ -45,9 +45,7 @@ function isValidISODate(value: string): boolean {
   const date = new Date(Date.UTC(year, month - 1, day));
 
   return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   );
 }
 
@@ -110,10 +108,7 @@ function validateRow(row: CsvRow): ValidationResult {
 }
 
 async function main() {
-  const csvPath = path.resolve(
-    process.cwd(),
-    '../data/ecofor_simulacion_inventario.csv'
-  );
+  const csvPath = path.resolve(process.cwd(), '../data/ecofor_simulacion_inventario.csv');
 
   console.log(`Leyendo CSV: ${csvPath}`);
 
@@ -138,7 +133,7 @@ async function main() {
 
       console.error(
         `Fila ${index + 2} rechazada [${row.codigo || 'SIN CODIGO'}]:`,
-        result.errors.join(', ')
+        result.errors.join(', '),
       );
 
       return;
@@ -187,14 +182,14 @@ async function main() {
           product.stock,
           product.proveedor,
           product.fecha_actualizacion,
-        ]
+        ],
       );
     }
 
     await client.query('COMMIT');
 
     console.log(
-      `Ingesta completada correctamente. ${validProducts.length} registros procesados mediante UPSERT.`
+      `Ingesta completada correctamente. ${validProducts.length} registros procesados mediante UPSERT.`,
     );
   } catch (error) {
     await client.query('ROLLBACK');

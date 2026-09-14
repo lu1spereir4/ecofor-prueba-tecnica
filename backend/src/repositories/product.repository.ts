@@ -12,9 +12,7 @@ export async function findProducts(filters: ProductFilters) {
   if (filters.search) {
     values.push(`%${filters.search}%`);
 
-    conditions.push(
-      `(nombre ILIKE $${values.length} OR codigo ILIKE $${values.length})`
-    );
+    conditions.push(`(nombre ILIKE $${values.length} OR codigo ILIKE $${values.length})`);
   }
 
   if (filters.category) {
@@ -23,10 +21,7 @@ export async function findProducts(filters: ProductFilters) {
     conditions.push(`categoria = $${values.length}`);
   }
 
-  const where =
-    conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const result = await pool.query(
     `
@@ -43,16 +38,13 @@ export async function findProducts(filters: ProductFilters) {
       ${where}
       ORDER BY codigo
     `,
-    values
+    values,
   );
 
   return result.rows;
 }
 
-export async function updateProductStock(
-  id: number,
-  stock: number
-) {
+export async function updateProductStock(id: number, stock: number) {
   const result = await pool.query(
     `
       UPDATE products
@@ -70,7 +62,7 @@ export async function updateProductStock(
         proveedor,
         fecha_actualizacion
     `,
-    [stock, id]
+    [stock, id],
   );
 
   return result.rows[0] ?? null;

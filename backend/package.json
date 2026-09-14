@@ -1,12 +1,18 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API de pedidos, reportes, descuentos e ingesta CSV",
   "scripts": {
     "test": "tsx src/test-api.ts",
     "typecheck": "tsc --noEmit",
     "ingest": "tsx src/ingest.ts",
+    "migrate": "tsx src/migrate.ts",
+    "ingest:orders": "tsx src/ingest-sales.ts",
+    "test:orders": "tsx src/test-orders.ts",
+    "test:backend": "tsx src/test-backend.ts",
+    "test:discounts": "tsx --test src/services/discount.service.test.ts",
+    "inspect:data": "tsx src/inspect-data.ts",
+    "verify:ingestion": "tsx src/verify-ingestion.ts",
     "test-db": "tsx src/test-db.ts",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts"
@@ -21,14 +27,20 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "pg-copy-streams": "^7.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.5.1",
     "@types/pg": "^8.23.1",
+    "@types/pg-copy-streams": "^1.2.5",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
