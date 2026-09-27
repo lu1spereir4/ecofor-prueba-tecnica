@@ -5,7 +5,6 @@
 **/.env.local
 **/.env.*
 !**/.env.example
-/GUIA_ENTREVISTA.md
 **/*.tsbuildinfo
 *.log
 /data/*
